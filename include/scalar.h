@@ -20,12 +20,12 @@ namespace autograd
         static int _next_id;
 
         Scalar(float data, OptionalScalar left, OptionalScalar right)
-            : _data(data), _grad(0.0), _left(left), _right(right) { id = _next_id; _next_id++; };
+            : _data(data), _grad(0.0), _left(left), _right(right) { id = _next_id++; };
         static void ordered_graph(Scalar &scalar, std::vector<Scalar> &stack);
 
     public:
-        Scalar() : _data(0.0), _grad(0.0) { id = _next_id; _next_id++; };
-        Scalar(float data) : _data(data), _grad(0.0) { id = _next_id; _next_id++; };
+        Scalar() : _data(0.0), _grad(0.0) { id = _next_id++; };
+        Scalar(float data) : _data(data), _grad(0.0) { id = _next_id++; };
 
         float data() { return _data; };
         float grad() { return _grad; };
@@ -38,6 +38,8 @@ namespace autograd
 
         friend std::ostream &operator<<(std::ostream &os, Scalar &scalar);
 
+        std::tuple<std::vector<std::tuple<int, int, int>>, std::vector<std::tuple<int, int>>> graph();
         void json(const std::string &filename = "graph.json");
+        void html(const std::string &filename = "graph.html");
     };
 }
