@@ -4,6 +4,8 @@
 
 namespace autograd
 {
+    int Scalar::_next_id = 0;
+
     Scalar Scalar::operator+(const Scalar &other) const
     {
         return Scalar(_data + other._data, std::make_shared<Scalar>(*this), std::make_shared<Scalar>(other));
@@ -47,42 +49,62 @@ namespace autograd
 
     void Scalar::json(const std::string &filename)
     {
-        std::vector<int> nodes;
+        std::vector<std::tuple<int, int, int>> nodes;
         std::vector<std::tuple<int, int>> edges;
 
-        std::vector<Scalar> stack = {*this};
+        std::vector<std::tuple<std::shared_ptr<Scalar>, int>> stack = {{std::make_shared<Scalar>(*this), 0}};
         while (stack.size())
         {
-            Scalar node = stack.back();
+            std::shared_ptr<Scalar> node;
+            int depth;
+
+            std::tie(node, depth) = stack.back();
             stack.pop_back();
 
-            if (node._left.has_value())
+            if (node->_left.has_value())
             {
-                stack.push_back(*node._left.value());
-                edges.push_back({node._data, node._left.value()->_data});
+                stack.push_back({node->_left.value(), depth + 1});
+                edges.push_back({node->id, node->_left.value()->id});
             }
 
-            if (node._right.has_value())
+            if (node->_right.has_value())
             {
-                stack.push_back(*node._right.value());
-                edges.push_back({node._data, node._right.value()->_data});
+                stack.push_back({node->_right.value(), depth + 1});
+                edges.push_back({node->id, node->_right.value()->id});
             }
 
-            nodes.push_back(node._data);
+            nodes.push_back({node->id, node->_data, depth});
         }
 
         std::ofstream file(filename);
 
         file << "{\n    \"nodes\": [\n";
-        for (int i = 0; i < nodes.size() - 1; i++)
-            file << "        { \"id\": " << nodes[i] << ", \"label\": \"" << nodes[i] << "\" },\n";
-        file << "        { \"id\": " << nodes.back() << ", \"label\": \"" << nodes.back() << "\" }\n    ],\n";
+        for (int i = 0; i < nodes.size(); i++)
+        {
+            int id;
+            int data;
+            int depth;
+            std::tie(id, data, depth) = nodes[i];
 
-        file << "    \"edges\": [\n";
-        for (int i = 0; i < edges.size() - 1; i++)
-            file << "        { \"from\": " << std::get<0>(edges[i]) << ", \"to\": " << std::get<1>(edges[i]) << " },\n";
-        file << "        { \"from\": " << std::get<0>(edges.back()) << ", \"to\": " << std::get<1>(edges.back()) << " }\n    ]\n}";
+            file << "        { \"id\": " << id << ", "
+                 << "\"label\": \"" << data << "\", "
+                 << "\"depth\": " << depth << " }"
+                 << (i == nodes.size() - 1 ? "\n" : ",\n");
+        }
 
+        file << "    ],\n    \"edges\": [\n";
+        for (int i = 0; i < edges.size(); i++)
+        {
+            int source;
+            int target;
+            std::tie(source, target) = edges[i];
+
+            file << "        { \"source\": " << source << ", "
+                 << "\"target\": " << target << " }"
+                 << (i == edges.size() - 1 ? "\n" : ",\n");
+        }
+
+        file << "    ]\n}\n";
         file.close();
     }
 }

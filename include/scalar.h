@@ -10,18 +10,22 @@ namespace autograd
     {
         using OptionalScalar = std::optional<std::shared_ptr<autograd::Scalar>>;
 
+        int id;
         float _data;
         float _grad;
         OptionalScalar _left;
         OptionalScalar _right;
         bool visited = false;
 
+        static int _next_id;
+
         Scalar(float data, OptionalScalar left, OptionalScalar right)
-            : _data(data), _grad(0.0), _left(left), _right(right) {};
+            : _data(data), _grad(0.0), _left(left), _right(right) { id = _next_id; _next_id++; };
         static void ordered_graph(Scalar &scalar, std::vector<Scalar> &stack);
 
     public:
-        Scalar(float data) : _data(data), _grad(0.0) {};
+        Scalar() : _data(0.0), _grad(0.0) { id = _next_id; _next_id++; };
+        Scalar(float data) : _data(data), _grad(0.0) { id = _next_id; _next_id++; };
 
         float data() { return _data; };
         float grad() { return _grad; };
